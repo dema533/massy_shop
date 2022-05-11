@@ -3,23 +3,29 @@
 namespace App\Entity;
 
 use Ramsey\Uuid\UuidInterface;
-use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\UserRepository;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
  * @ORM\Table(name="`user`")
+ * @UniqueEntity(fields="username", errorPath="[username]", message="cet utilisateur existe déjà!", groups={"Create", "Update"})
+ * @UniqueEntity(fields="email", errorPath="[email]", message="cet email est déjà utilisé par un autre user!", groups={"Create", "Updated"})
+ * @UniqueEntity(fields="phoneNumber", errorPath="[phoneNumber]", message="ce numéro est déjà utilisé par un autre utilistateur!", groups={"Create", "Updated"})
  */
 class User
 {
-     /**
+    public const ROLE_USER = 'ROLE_USER';
+    public const ROLE_ADMIN = 'ROLE_ADMIN';
+    public const ROLE_COMPANY = 'ROLE_COMPANY';
+    public const ROLE_CUSTOMER = 'ROLE_CUSTOMER';
+    public const ROLE_SUPER_ADMIN = 'ROLE_SUPER_ADMIN';
+
+      /**
      * @ORM\Id
-     * @ORM\Column(type="uuid_binary_ordered_time", unique=true)
-     * @ORM\GeneratedValue(strategy="CUSTOM")
-     * @ORM\CustomIdGenerator(class="Ramsey\Uuid\Doctrine\UuidOrderedTimeGenerator")
-     *
-     * 
-     * @var UuidInterface
+     * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue
      */
     private $id;
 
@@ -54,11 +60,15 @@ class User
     private $password;
 
     /**
-     * @ORM\Column(type="array")
+     * @ORM\Column(type="json")
      */
-    private $role = [];
+    private $roles = [];
 
-   
+    public function __construct()
+    {
+        $this->roles = [self::ROLE_USER];
+    }
+
     public function getFirstname(): ?string
     {
         return $this->firstname;
@@ -131,14 +141,38 @@ class User
         return $this;
     }
 
-    public function getRole(): ?array
+    /**
+     * Get the value of roles
+     */ 
+    public function getRoles(): array
     {
-        return $this->role;
+        return $this->roles;
     }
 
-    public function setRole(array $role): self
+    /**
+     * Set the value of roles
+     *
+     * @return  self
+     */
+    public function setRoles(array $roles): self
     {
-        $this->role = $role;
+
+        foreach ($roles as $role) {
+
+            $this->addRole($role);
+        }
+
+        return $this;
+    }
+
+
+    public function addRole(string $role): self
+    {
+        $role = strtoupper($role);
+
+        if (false === in_array($role, $this->roles, true)) {
+            $this->roles[] = $role;
+        }
 
         return $this;
     }
@@ -152,4 +186,5 @@ class User
     {
         return $this->id;
     }
+
 }
